@@ -1,0 +1,89 @@
+# Return one move after examining the opponent's previous move.
+def player(prev_play, opponent_history=[], my_history=[]):
+    # An empty previous move means that a new game has started.
+    if prev_play == "":
+        # Remove moves from the previous game.
+        opponent_history.clear()
+        # Remove our moves from the previous game.
+        my_history.clear()
+    else:
+        # Save the opponent's latest move for future predictions.
+        opponent_history.append(prev_play)
+
+    # Map each move to the move that defeats it.
+    counter = {"R": "P", "P": "S", "S": "R"}
+
+    # Kris responds to our previous move with the move that defeats it.
+    kris_detected = (
+        len(my_history) >= 3
+        and opponent_history[-1] == counter[my_history[-2]]
+        and opponent_history[-2] == counter[my_history[-3]]
+    )
+
+    # Store the repeating sequence used by Quincy.
+    quincy_cycle = ["R", "R", "P", "P", "S"]
+
+    # Build the sequence of Quincy moves expected so far.
+    quincy_moves = [quincy_cycle[(index + 1) % len(quincy_cycle)]
+                    for index in range(len(opponent_history))]
+
+    # Check whether the opponent's recent moves match Quincy's sequence.
+    if (len(opponent_history) >= 5
+            and opponent_history[-5:] == quincy_moves[-5:]):
+        # Predict Quincy's next move using the current position in its cycle.
+        predicted_move = quincy_cycle[(len(my_history) + 1)
+                                      % len(quincy_cycle)]
+    elif kris_detected:
+        # Predict Kris's next move from our latest move.
+        predicted_move = counter[my_history[-1]]
+    elif len(my_history) > 0:
+        # Look at our ten most recent moves for Mrugesh's prediction pattern.
+        last_ten = my_history[-10:]
+
+        # Find which move appears most often in that recent history.
+        my_most_frequent = max(set(last_ten), key=last_ten.count)
+
+        # Mrugesh is expected to play the move that beats our frequent move.
+        mrugesh_expected = {"R":"P","P":"S","S":"R"}[my_most_frequent]
+
+        # If the opponent played that expected move, treat it as Mrugesh.
+        if opponent_history[-1] == mrugesh_expected:
+            # Predict that Mrugesh will play the same counter again.
+            predicted_move = mrugesh_expected
+        else:
+            # Otherwise, estimate Abbey's prediction of our next move.
+            last = my_history[-1]
+
+            # List the three possible moves that could follow our last move.
+            possible_pairs = [last+"R", last+"P", last+"S"]
+
+            # Start every two-move transition count at zero.
+            pair_counts = {pair: 0 for pair in (
+                "RR", "RP", "RS", "PR", "PP", "PS", "SR", "SP", "SS"
+            )}
+
+            # Count every pair of consecutive moves in our history.
+            for previous, current in zip(my_history, my_history[1:]):
+                pair_counts[previous + current] += 1
+
+            # Select the most common transition after our latest move.
+            best_pair = max(possible_pairs,
+                            key=lambda pair: pair_counts[pair])
+
+            # Extract Abbey's predicted next move from the selected pair.
+            predicted_my_next = best_pair[-1]
+
+            # Predict Abbey's response to that move.
+            predicted_move = {"R":"P","P":"S","S":"R"}[predicted_my_next]
+    else:
+        # Use Rock as the first prediction when there is no history yet.
+        predicted_move = "R"
+
+    # Play the move that defeats the predicted opponent move.
+    response = {"R": "P", "P": "S", "S": "R"}[predicted_move]
+
+    # Save our response so it can be used in the next round.
+    my_history.append(response)
+
+    # Return our chosen move to the game engine.
+    return response
